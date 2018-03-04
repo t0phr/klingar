@@ -21,12 +21,15 @@ import android.support.annotation.NonNull;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v4.media.session.PlaybackStateCompat.State;
+import android.support.v4.util.Pair;
 
 import net.simno.klingar.AndroidClock;
 import net.simno.klingar.R;
 import net.simno.klingar.data.model.Track;
 import net.simno.klingar.playback.QueueManager.RepeatMode;
 import net.simno.klingar.playback.QueueManager.ShuffleMode;
+
+import java.util.List;
 
 import timber.log.Timber;
 
@@ -60,9 +63,9 @@ class PlaybackManager implements Playback.Callback {
   }
 
   private void handlePlayRequest() {
-    Track currentQueueItem = queueManager.currentTrack();
-    if (currentQueueItem != null) {
-      playback.play(currentQueueItem);
+    Pair<List<Track>, Integer> currentQueue = queueManager.currentQueue();
+    if (currentQueue != null) {
+      playback.play(currentQueue);
       serviceCallback.onPlaybackStart();
     }
   }
@@ -162,17 +165,20 @@ class PlaybackManager implements Playback.Callback {
   void switchToPlayback(@NonNull Playback newPlayback, boolean resumePlaying) {
     Timber.d("switchToPlayback %s resume %s", newPlayback.getClass().getSimpleName(),
         resumePlaying);
+    Playback oldPlayback = playback;
     // Suspend the current one
-    @State int oldState = playback.getState();
-    int position = playback.getCurrentStreamPosition();
-    Track currentMediaId = playback.getCurrentTrack();
-    playback.stop(false);
+    @State int oldState = oldPlayback.getState();
+    int position = oldPlayback.getCurrentStreamPosition();
+    Track currentMediaId = oldPlayback.getCurrentTrack();
+    oldPlayback.stop(false);
+
     newPlayback.setCallback(this);
-    newPlayback.setCurrentTrack(currentMediaId);
-    newPlayback.seekTo(position < 0 ? 0 : position);
-    newPlayback.start();
-    // Finally swap the instance
     playback = newPlayback;
+    playback.setCurrentQueue(queueManager.currentQueue());
+    playback.seekTo(position < 0 ? 0 : position);
+    playback.start();
+    // Finally swap the instance
+    // playback = newPlayback;
     switch (oldState) {
       case PlaybackStateCompat.STATE_BUFFERING:
       case PlaybackStateCompat.STATE_CONNECTING:
@@ -180,9 +186,8 @@ class PlaybackManager implements Playback.Callback {
         playback.pause();
         break;
       case PlaybackStateCompat.STATE_PLAYING:
-        Track currentQueueItem = queueManager.currentTrack();
-        if (resumePlaying && currentQueueItem != null) {
-          playback.play(currentQueueItem);
+        if (resumePlaying && queueManager.currentQueue() != null) {
+          playback.resume();
         } else if (!resumePlaying) {
           playback.pause();
         } else {
