@@ -88,6 +88,10 @@ public class QueueManager {
     return queue.get(position);
   }
 
+  public Pair<List<Track>, Integer> currentQueue() {
+    return new Pair<>(queue, position);
+  }
+
   void setCurrentTrack(Track currentTrack) {
     if (queue.contains(currentTrack)) {
       setQueuePosition(currentTrack.queueItemId());
