@@ -19,6 +19,7 @@ limitations under the License.
   <string name="app_name">Klingar</string>
 
   <string name="menu_media_route">Play on…</string>
+  <string name="menu_sleep_timer">Sleep Timer</string>
   <string name="menu_licenses">Open source licenses</string>
   <string name="menu_sign_out">Sign out</string>
 
