@@ -122,8 +122,14 @@ dependencies {
   annotationProcessor "com.github.bumptech.glide:compiler:${versions.glide}"
   implementation "com.github.bumptech.glide:okhttp-integration:${versions.glide}"
 
-  implementation "com.google.android.exoplayer:exoplayer-core:${versions.exoPlayer}"
-  implementation "com.google.android.exoplayer:extension-okhttp:${versions.exoPlayer}"
+  // implementation "com.google.android.exoplayer:exoplayer-core:${versions.exoPlayer}"
+  // implementation "com.google.android.exoplayer:extension-okhttp:${versions.exoPlayer}"
+  compile project(':exoplayer-library')
+  // compile project(':exoplayer-library-dash')
+  // compile project(':exoplayer-library-ui')
+  compile project(':exoplayer-extension-okhttp')
+  compile project(':exoplayer-extension-flac')
+  // compile project(':exoplayer-extension-cast')
   implementation "com.google.android.gms:play-services-cast-framework:${versions.playServices}"
   implementation "com.google.android.gms:play-services-oss-licenses:${versions.playServices}"
 
