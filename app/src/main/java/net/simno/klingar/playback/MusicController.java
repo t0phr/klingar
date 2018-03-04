@@ -63,10 +63,8 @@ public class MusicController {
       @State int newState = newPlaybackState.getState();
       @State int currentState = stateRelay.getValue() != null ? stateRelay.getValue() : STATE_NONE;
 
-      if (newState != currentState) {
-        stateRelay.accept(newState);
-        handleProgress(newState, newPlaybackState.getPosition());
-      }
+      stateRelay.accept(newState);
+      handleProgress(newState, newPlaybackState.getPosition());
       playbackState = newPlaybackState;
 
       Timber.d("onPlaybackStateChanged %s", getStateString(newState));
@@ -171,6 +169,7 @@ public class MusicController {
         case STATE_BUFFERING:
           pause();
           break;
+        case STATE_NONE:
         case STATE_PAUSED:
         case STATE_STOPPED:
           play();
