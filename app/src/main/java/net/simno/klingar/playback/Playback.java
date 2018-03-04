@@ -17,8 +17,13 @@
 package net.simno.klingar.playback;
 
 import android.support.v4.media.session.PlaybackStateCompat.State;
+import android.support.v4.util.Pair;
 
 import net.simno.klingar.data.model.Track;
+
+import java.util.List;
+
+import io.reactivex.Flowable;
 
 /**
  * Interface representing either Local or Remote Playback. The {@link MusicService} works
@@ -73,6 +78,16 @@ interface Playback {
   void play(Track track);
 
   /**
+   * Resume paused playback
+   */
+  void resume();
+
+  /**
+   * @param queue to play
+   */
+  void play(Pair<List<Track>, Integer> queue);
+
+  /**
    * Pause the current playing track
    */
   void pause();
@@ -93,6 +108,13 @@ interface Playback {
    * @param track to be set as the current.
    */
   void setCurrentTrack(Track track);
+
+  /**
+   * Set the current queue. This is only used when switching from one playback to another.
+   *
+   * @param queue to be set as the current.
+   */
+  void setCurrentQueue(Pair<List<Track>, Integer> queue);
 
   /**
    * @param callback to be called

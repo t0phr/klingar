@@ -16,18 +16,22 @@
  */
 package net.simno.klingar.playback;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v4.media.session.PlaybackStateCompat.State;
+import android.support.v4.util.Pair;
 
 import com.google.android.gms.cast.MediaInfo;
 import com.google.android.gms.cast.MediaMetadata;
 import com.google.android.gms.cast.MediaStatus;
+import com.google.android.gms.cast.MediaLoadOptions;
 import com.google.android.gms.cast.framework.CastContext;
 import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.media.RemoteMediaClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.images.WebImage;
 import com.squareup.moshi.JsonAdapter;
 import com.squareup.moshi.Moshi;
@@ -38,6 +42,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 
 import timber.log.Timber;
@@ -59,6 +64,7 @@ class CastPlayback implements Playback {
   private volatile int playerState;
   private volatile int currentPosition;
   private volatile Track currentTrack;
+  private volatile int idleReason;
 
   CastPlayback(Context context) {
     appContext = context.getApplicationContext();
@@ -146,6 +152,11 @@ class CastPlayback implements Playback {
     currentPosition = getCurrentStreamPosition();
   }
 
+  @Override
+  public void play(Pair<List<Track>, Integer> queue) {
+    play(queue.first.get(queue.second));
+  }
+
   @Override public void play(Track track) {
     try {
       loadMedia(track, true);
@@ -172,6 +183,23 @@ class CastPlayback implements Playback {
       }
     } catch (JSONException e) {
       Timber.e(e, "Exception pausing cast playback");
+      state = PlaybackStateCompat.STATE_ERROR;
+      if (callback != null) {
+        callback.onPlaybackStatusChanged();
+      }
+    }
+  }
+
+  @Override
+  public void resume() {
+    try {
+      loadMedia(currentTrack, true);
+      state = PlaybackStateCompat.STATE_BUFFERING;
+      if (callback != null) {
+        callback.onPlaybackStatusChanged();
+      }
+    } catch (JSONException e) {
+      Timber.e(e, "Exception loading media");
       state = PlaybackStateCompat.STATE_ERROR;
       if (callback != null) {
         callback.onPlaybackStatusChanged();
@@ -212,6 +240,11 @@ class CastPlayback implements Playback {
     this.currentTrack = track;
   }
 
+  @Override
+  public void setCurrentQueue(Pair<List<Track>, Integer> queue) {
+    this.setCurrentTrack(queue.first.get(queue.second));
+  }
+
   @Override public void setCallback(Callback callback) {
     this.callback = callback;
   }
@@ -239,7 +272,19 @@ class CastPlayback implements Playback {
     JSONObject customData = new JSONObject();
     customData.put(CUSTOM_DATA_TRACK, jsonAdapter.toJson(track));
     MediaInfo media = toCastMediaMetadata(track, customData);
-    remoteMediaClient.load(media, autoPlay, currentPosition, customData);
+
+    // remoteMediaClient.load(media, autoPlay, currentPosition, customData);
+
+    PendingResult result = remoteMediaClient.load(media,
+            new MediaLoadOptions.Builder()
+            .setAutoplay(autoPlay)
+            .setPlayPosition(currentPosition)
+            .setPlaybackRate(1)
+//                .setActiveTrackIds()
+            .setCustomData(customData)
+            .build());
+
+    this.idleReason = MediaStatus.IDLE_REASON_FINISHED;
   }
 
   private void setMetadataFromRemote() {
@@ -282,7 +327,8 @@ class CastPlayback implements Playback {
     playerState = newPlayerState;
     switch (playerState) {
       case MediaStatus.PLAYER_STATE_IDLE:
-        if (idleReason == MediaStatus.IDLE_REASON_FINISHED) {
+        if (idleReason == MediaStatus.IDLE_REASON_FINISHED
+                && this.idleReason == MediaStatus.IDLE_REASON_FINISHED) {
           if (callback != null) {
             currentPosition = 0;
             callback.onCompletion();
@@ -293,6 +339,7 @@ class CastPlayback implements Playback {
         state = PlaybackStateCompat.STATE_BUFFERING;
         if (callback != null) {
           callback.onPlaybackStatusChanged();
+          this.idleReason = MediaStatus.IDLE_REASON_FINISHED;
         }
         break;
       case MediaStatus.PLAYER_STATE_PLAYING:
@@ -300,6 +347,7 @@ class CastPlayback implements Playback {
         setMetadataFromRemote();
         if (callback != null) {
           callback.onPlaybackStatusChanged();
+          this.idleReason = MediaStatus.IDLE_REASON_FINISHED;
         }
         break;
       case MediaStatus.PLAYER_STATE_PAUSED:

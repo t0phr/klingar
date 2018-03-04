@@ -20,11 +20,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v4.media.session.PlaybackStateCompat.State;
+import android.support.v4.util.Pair;
 
 import com.google.android.exoplayer2.ExoPlaybackException;
 import com.google.android.exoplayer2.ExoPlayerFactory;
@@ -35,6 +38,8 @@ import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.audio.AudioAttributes;
 import com.google.android.exoplayer2.ext.okhttp.OkHttpDataSourceFactory;
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
+import com.google.android.exoplayer2.source.ConcatenatingMediaSource;
+import com.google.android.exoplayer2.source.DynamicConcatenatingMediaSource;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
@@ -45,10 +50,17 @@ import com.google.android.exoplayer2.util.Util;
 import net.simno.klingar.R;
 import net.simno.klingar.data.model.Track;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
+import io.reactivex.Flowable;
 import okhttp3.Call;
 import timber.log.Timber;
 
 import static android.media.AudioManager.ACTION_AUDIO_BECOMING_NOISY;
+import static android.media.AudioManager.AUDIOFOCUS_GAIN;
 import static com.google.android.exoplayer2.C.CONTENT_TYPE_MUSIC;
 import static com.google.android.exoplayer2.C.TIME_UNSET;
 import static com.google.android.exoplayer2.C.USAGE_MEDIA;
@@ -73,12 +85,14 @@ class LocalPlayback implements Playback, Player.EventListener,
   private final MusicController musicController;
   private final DefaultDataSourceFactory dataSourceFactory;
   private final DefaultExtractorsFactory extractorsFactory;
+  private DynamicConcatenatingMediaSource dynamicMediaSource;
   private SimpleExoPlayer exoPlayer;
   private Callback callback;
   private int audioFocus = AUDIO_NO_FOCUS_NO_DUCK;
   private boolean playOnFocusGain;
   private boolean audioNoisyReceiverRegistered;
   private Track currentTrack;
+  private List<Track> currentQueue;
   // Whether to return STATE_NONE or STATE_STOPPED when exoPlayer is null;
   private boolean exoPlayerNullIsStopped;
 
@@ -157,11 +171,26 @@ class LocalPlayback implements Playback, Player.EventListener,
   }
 
   @Override public int getCurrentStreamPosition() {
-    return exoPlayer != null ? (int) exoPlayer.getCurrentPosition() : 0;
+    if (exoPlayer != null) {
+      int pos = (int) exoPlayer.getCurrentPosition();
+      Timber.d("current playback pos = " + pos);
+      return pos;
+    }
+
+    return 0;
   }
 
   @Override public void updateLastKnownStreamPosition() {
     // Nothing to do. Position maintained by ExoPlayer.
+  }
+
+  /**
+   * @param queue to play
+   */
+  @Override
+  public void play(Pair<List<Track>, Integer> queue) {
+    playOnFocusGain = true;
+    setCurrentQueue(queue);
   }
 
   @Override public void play(Track track) {
@@ -190,6 +219,7 @@ class LocalPlayback implements Playback, Player.EventListener,
       Uri uri = Uri.parse(track.source());
       ExtractorMediaSource source = new ExtractorMediaSource(uri, dataSourceFactory,
           extractorsFactory, null, null);
+      source = new ExtractorMediaSource.Factory(dataSourceFactory).createMediaSource(uri);
       exoPlayer.prepare(source);
 
       // If we are streaming from the internet, we want to hold a Wifi lock, which prevents the
@@ -212,6 +242,12 @@ class LocalPlayback implements Playback, Player.EventListener,
     unregisterAudioNoisyReceiver();
   }
 
+  @Override
+  public void resume() {
+    playOnFocusGain = true;
+    configurePlayerState();
+  }
+
   @Override public void seekTo(int position) {
     Timber.d("seekTo %s", position);
     if (exoPlayer != null) {
@@ -228,6 +264,60 @@ class LocalPlayback implements Playback, Player.EventListener,
 
   @Override public void setCurrentTrack(Track track) {
     this.currentTrack = track;
+  }
+
+  @Override
+  public void setCurrentQueue(Pair<List<Track>, Integer> queue) {
+    // playOnFocusGain = false;
+    tryToGetAudioFocus();
+    registerAudioNoisyReceiver();
+
+    List<Track> trackList = queue.first;
+    Integer trackPos = queue.second;
+
+    Timber.d("play %s", trackList.get(trackPos));
+
+    boolean trackHasChanged = !trackList.get(trackPos).equals(currentTrack);
+    if (trackHasChanged) {
+      currentTrack = trackList.get(trackPos);
+    }
+
+    // boolean queueHasChanged = !trackList.equals(currentQueue);
+    if (trackHasChanged || exoPlayer == null) {
+      currentQueue = trackList;
+      releaseResources(false); // release everything except the player
+
+      if (exoPlayer == null) {
+        exoPlayer = ExoPlayerFactory.newSimpleInstance(context, new DefaultTrackSelector());
+        exoPlayer.addListener(this);
+      }
+      AudioAttributes audioAttributes = new AudioAttributes.Builder()
+              .setContentType(CONTENT_TYPE_MUSIC)
+              .setUsage(USAGE_MEDIA)
+              .build();
+      exoPlayer.setAudioAttributes(audioAttributes);
+
+      dynamicMediaSource = new DynamicConcatenatingMediaSource();
+
+      List<Uri> uris = new ArrayList<>();
+      for (Track t : trackList.subList(trackPos, trackList.size())) {
+        uris.add(Uri.parse(t.source()));
+      }
+
+      for (Uri uri : uris) {
+        ExtractorMediaSource source = new ExtractorMediaSource.Factory(dataSourceFactory)
+                .createMediaSource(uri);
+        dynamicMediaSource.addMediaSource(source);
+      }
+
+      exoPlayer.prepare(dynamicMediaSource);
+
+      // If we are streaming from the internet, we want to hold a Wifi lock, which prevents the
+      // Wifi radio from going to sleep while the song is playing.
+      wifiLock.acquire();
+    }
+
+    configurePlayerState();
   }
 
   @Override public void setCallback(Callback callback) {
@@ -259,11 +349,9 @@ class LocalPlayback implements Playback, Player.EventListener,
   @Override public void onRepeatModeChanged(int repeatMode) {
   }
 
-  @Override public void onTimelineChanged(Timeline timeline, Object manifest) {
-  }
-
   @Override
   public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {
+
   }
 
   @Override public void onLoadingChanged(boolean isLoading) {
@@ -276,9 +364,6 @@ class LocalPlayback implements Playback, Player.EventListener,
     }
   }
 
-  @Override public void onPositionDiscontinuity() {
-  }
-
   @Override public void onPlaybackParametersChanged(PlaybackParameters playbackParameters) {
   }
 
@@ -286,6 +371,16 @@ class LocalPlayback implements Playback, Player.EventListener,
     Timber.d("tryToGetAudioFocus");
     int result = audioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC,
         AudioManager.AUDIOFOCUS_GAIN);
+    android.media.AudioAttributes audioAttributes = new android.media.AudioAttributes.Builder()
+            .setContentType(CONTENT_TYPE_MUSIC)
+            .setUsage(USAGE_MEDIA)
+            .build();
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      result = audioManager.requestAudioFocus(new AudioFocusRequest.Builder(AUDIOFOCUS_GAIN)
+              .setOnAudioFocusChangeListener(this)
+              .setAudioAttributes(audioAttributes)
+              .build());
+    }
     if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
       audioFocus = AUDIO_FOCUSED;
     } else {
@@ -356,6 +451,68 @@ class LocalPlayback implements Playback, Player.EventListener,
   }
 
   /**
+   * Called when the timeline and/or manifest has been refreshed.
+   * <p>
+   * Note that if the timeline has changed then a position discontinuity may also have occurred.
+   * For example, the current period index may have changed as a result of periods being added or
+   * removed from the timeline. This will <em>not</em> be reported via a separate call to
+   * {@link #onPositionDiscontinuity(int)}.
+   *
+   * @param timeline The latest timeline. Never null, but may be empty.
+   * @param manifest The latest manifest. May be null.
+   * @param reason   The TimeLineChangeReason responsible for this timeline change.
+   */
+  @Override
+  public void onTimelineChanged(Timeline timeline, Object manifest, int reason) {
+
+  }
+
+  /**
+   * Called when the value of getShuffleModeEnabled() changes.
+   *
+   * @param shuffleModeEnabled Whether shuffling of windows is enabled.
+   */
+  @Override
+  public void onShuffleModeEnabledChanged(boolean shuffleModeEnabled) {
+
+  }
+
+  /**
+   * Called when a position discontinuity occurs without a change to the timeline. A position
+   * discontinuity occurs when the current window or period index changes (as a result of playback
+   * transitioning from one period in the timeline to the next), or when the playback position
+   * jumps within the period currently being played (as a result of a seek being performed, or
+   * when the source introduces a discontinuity internally).
+   * <p>
+   * When a position discontinuity occurs as a result of a change to the timeline this method is
+   * <em>not</em> called. {@link #onTimelineChanged(Timeline, Object, int)} is called in this
+   * case.
+   *
+   * @param reason The DiscontinuityReason responsible for the discontinuity.
+   */
+  @Override
+  public void onPositionDiscontinuity(int reason) {
+    if (reason == Player.DISCONTINUITY_REASON_PERIOD_TRANSITION) {
+      // Update current track
+      currentTrack = currentQueue.get(exoPlayer.getCurrentWindowIndex());
+
+      // Notify the others we have a new track
+      callback.onCompletion();
+      callback.onPlaybackStatusChanged();
+    }
+  }
+
+  /**
+   * Called when all pending seek requests have been processed by the player. This is guaranteed
+   * to happen after any necessary changes to the player state were reported to
+   * {@link #onPlayerStateChanged(boolean, int)}.
+   */
+  @Override
+  public void onSeekProcessed() {
+
+  }
+
+  /**
    * Releases resources used by the service for playback, which is mostly just the WiFi lock for
    * local playback. If requested, the ExoPlayer instance is also released.
    *
@@ -371,6 +528,11 @@ class LocalPlayback implements Playback, Player.EventListener,
       exoPlayerNullIsStopped = true;
       playOnFocusGain = false;
     }
+
+    /*
+    for (int i = 0; i < dynamicMediaSource.getSize(); i++) {
+      dynamicMediaSource.removeMediaSource(i);
+    }*/
 
     if (wifiLock.isHeld()) {
       wifiLock.release();
