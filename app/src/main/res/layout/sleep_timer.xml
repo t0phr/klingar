@@ -7,21 +7,38 @@
     android:padding="0dp">
     <net.simno.klingar.ui.widget.CircleSeekBar
         android:id="@+id/sleep_timer_circle_seekbar"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:padding="24dp"
         app:wheel_unreached_width="4dp"
         app:wheel_reached_width="4dp"
         app:wheel_pointer_radius="9dp"
         app:wheel_scroll_only_one_circle="false"
         app:wheel_can_touch="true" />
-    <TextView
-        android:id="@+id/sleep_timer_selected_time"
+    <LinearLayout
         android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:layout_centerInParent="true"
-        android:textSize="72sp"
-        android:textAllCaps="true"
-        android:textStyle="normal"
-        android:textScaleX="1.0"
-        android:layout_height="wrap_content" />
+        android:gravity="center_vertical">
+        <TextView
+            android:id="@+id/sleep_timer_selected_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="72sp"
+            android:textAllCaps="true"
+            android:textStyle="normal"
+            android:textScaleX="1.0" />
+        <TextView
+            android:id="@+id/sleep_timer_stop_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:textSize="16sp"
+            android:textAllCaps="true"
+            android:textStyle="bold"
+            android:textColor="@color/primary_light" />
+
+    </LinearLayout>
+
 </RelativeLayout>
