@@ -242,6 +242,10 @@ class CastPlayback implements Playback {
 
   @Override
   public void setCurrentQueue(Pair<List<Track>, Integer> queue) {
+    if (queue.first.isEmpty()) {
+      return;
+    }
+
     this.setCurrentTrack(queue.first.get(queue.second));
   }
 

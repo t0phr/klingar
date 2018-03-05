@@ -268,7 +268,10 @@ class LocalPlayback implements Playback, Player.EventListener,
 
   @Override
   public void setCurrentQueue(Pair<List<Track>, Integer> queue) {
-    // playOnFocusGain = false;
+    if (queue.first.isEmpty()) {
+      return;
+    }
+
     tryToGetAudioFocus();
     registerAudioNoisyReceiver();
 
