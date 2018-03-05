@@ -16,14 +16,23 @@ limitations under the License.
 -->
 <resources>
 
-  <color name="primary">#222326</color>
-  <color name="background">#121314</color>
-  <color name="primary_dark">#121314</color>
-  <color name="accent">#f7a703</color>
+  <color name="primary">#181818</color>
+  <color name="primary_dark">#121212</color>
+  <color name="accent">#e5a00d</color>
+  <color name="accent_dark">#7a4700</color>
+  <color name="accent_bright">#e0e3e6</color>
+  <color name="background">#101010</color>
+  <color name="primary_light">#424242</color>
+  <color name="primary_bright">#636363</color>
 
-  <color name="header">#88898c</color>
-  <color name="title">@android:color/white</color>
-  <color name="subtitle">#adaeb3</color>
-  <color name="divider">#2e2f33</color>
+  <color name="circleseekbar_reached">@color/accent_bright</color>
+  <color name="circleseekbar_unreached">@color/primary</color>
+  <color name="circleseekbar_overscroll">@color/primary_bright</color>
+  <color name="circleseekbar_pointer">@color/accent_bright</color>
+
+  <color name="header">@color/primary_dark</color>
+  <color name="title">#f2f3f4</color>
+  <color name="subtitle">#e0e3e6</color>
+  <color name="divider">@color/primary</color>
 
 </resources>
