@@ -30,7 +30,7 @@ limitations under the License.
   <color name="circleseekbar_overscroll">@color/primary_bright</color>
   <color name="circleseekbar_pointer">@color/accent_bright</color>
 
-  <color name="header">@color/primary_dark</color>
+  <color name="header">@color/primary_light</color>
   <color name="title">#f2f3f4</color>
   <color name="subtitle">#e0e3e6</color>
   <color name="divider">@color/primary</color>
