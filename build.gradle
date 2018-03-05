@@ -42,7 +42,7 @@ buildscript {
       'rxJava': '2.1.6',
       'rxLifecycle': '2.2.0',
       'rxRelay': '2.0.0',
-      'timber': '4.6.0'
+      'timber': '4.6.0',
   ]
 
   repositories {

@@ -22,6 +22,9 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
 import android.view.ViewGroup;
@@ -36,11 +39,13 @@ import net.simno.klingar.R;
 import net.simno.klingar.data.LoginManager;
 import net.simno.klingar.playback.MusicController;
 import net.simno.klingar.playback.MusicService;
+import net.simno.klingar.playback.SleepTimer;
 
 import javax.inject.Inject;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import timber.log.Timber;
 
 public class KlingarActivity extends AppCompatActivity {
 
@@ -75,6 +80,8 @@ public class KlingarActivity extends AppCompatActivity {
         router.setRoot(RouterTransaction.with(new BrowserController(null)));
       }
     }
+
+    SleepTimer.setMusicController(musicController);
   }
 
   @Override protected void onStart() {
@@ -101,6 +108,9 @@ public class KlingarActivity extends AppCompatActivity {
       case R.id.sign_out:
         logout();
         return true;
+      case R.id.sleep_timer:
+        showSleepTimerDialog();
+        return true;
       default:
         return super.onOptionsItemSelected(item);
     }
@@ -114,6 +124,21 @@ public class KlingarActivity extends AppCompatActivity {
 
   private void showCredits() {
     startActivity(new Intent(this, OssLicensesMenuActivity.class));
+  }
+
+  private void showSleepTimerDialog() {
+    Timber.d("Show sleep timer dialog");
+    FragmentManager fm = getSupportFragmentManager();
+    FragmentTransaction ft = fm.beginTransaction();
+    Fragment prev = fm.findFragmentByTag("sleep_timer_dialog");
+
+    if (prev != null) {
+      ft.remove(prev);
+    }
+
+    ft.addToBackStack(null);
+
+    new SleepTimerDialog().show(ft, "sleep_timer_dialog");
   }
 
   private void logout() {

@@ -14,25 +14,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<FrameLayout
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/miniplayer_container"
     android:layout_width="match_parent"
     android:layout_height="64dp"
+    android:orientation="horizontal"
     android:background="?android:attr/selectableItemBackground">
 
   <LinearLayout
-      android:layout_width="match_parent"
+      android:layout_width="0dp"
       android:layout_height="wrap_content"
+      android:layout_weight="1"
       android:layout_gravity="start|center_vertical"
       android:layout_marginStart="@dimen/item_horizontal_padding"
-      android:orientation="horizontal">
+      android:orientation="vertical">
 
     <TextView
         android:id="@+id/miniplayer_track_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:ellipsize="marquee"
         android:textColor="@color/title"
         android:textStyle="bold"/>
 
@@ -40,6 +43,7 @@ limitations under the License.
         android:id="@+id/miniplayer_artist_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:ellipsize="marquee"
         android:textColor="@color/subtitle"/>
 
   </LinearLayout>
@@ -56,4 +60,4 @@ limitations under the License.
       android:scaleType="fitCenter"
       app:srcCompat="@drawable/miniplayer_play_pause"/>
 
-</FrameLayout>
+</LinearLayout>

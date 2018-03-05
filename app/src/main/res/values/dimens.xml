@@ -28,4 +28,8 @@ limitations under the License.
   <dimen name="item_vertical_padding">5dp</dimen>
   <dimen name="item_divider_height">1dp</dimen>
 
+  <dimen name="circleseekbar_width">32dp</dimen>
+  <dimen name="circleseekbar_shadow_radius">2dp</dimen>
+  <dimen name="circleseekbar_shadow_offset">2dp</dimen>
+
 </resources>

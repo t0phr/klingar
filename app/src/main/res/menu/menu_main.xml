@@ -22,7 +22,14 @@ limitations under the License.
   <item
       android:id="@+id/media_route_menu_item"
       android:title="@string/menu_media_route"
-      app:actionProviderClass="android.support.v7.app.MediaRouteActionProvider"
+      app:actionProviderClass="net.simno.klingar.ui.widget.ThemedMediaRouteActionProvider"
+      app:showAsAction="always"
+      tools:ignore="AlwaysShowAction"/>
+
+  <item
+      android:id="@+id/sleep_timer"
+      android:title="@string/menu_sleep_timer"
+      android:icon="@drawable/ic_zzz"
       app:showAsAction="always"
       tools:ignore="AlwaysShowAction"/>
 

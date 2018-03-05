@@ -99,7 +99,7 @@ public class MiniPlayerController extends BaseController {
 
   private void updateTrackInfo(@NonNull Track track) {
     trackTitle.setText(track.title());
-    artistTitle.setText(" \u2022 ");
-    artistTitle.append(track.artistTitle());
+    // artistTitle.setText(" \u2022 ");
+    artistTitle.setText(track.artistTitle());
   }
 }
