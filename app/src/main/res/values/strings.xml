@@ -23,6 +23,11 @@ limitations under the License.
   <string name="menu_licenses">Open source licenses</string>
   <string name="menu_sign_out">Sign out</string>
 
+  <string name="sleep_timer_dialog_new">Set New Timer</string>
+  <string name="sleep_timer_dialog_ok">OK</string>
+  <string name="sleep_timer_dialog_cancel">Delete</string>
+  <string name="sleep_timer_dialog_selected_time">%1$s:%2$s</string>
+
   <string name="hint_username">Plex Username</string>
   <string name="hint_password">Plex Password</string>
   <string name="invalid_username">Invalid username</string>
